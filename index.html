@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shared Canvas</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #10131a; color: #f4f7fb; }
+      main { width: min(680px, 90vw); padding: 42px; border: 1px solid #2c3442; border-radius: 24px; background: #171c25; box-shadow: 0 22px 80px #0005; }
+      h1 { margin-top: 0; font-size: clamp(2rem, 5vw, 3.5rem); }
+      p { color: #aeb8c8; line-height: 1.6; }
+      .links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+      a { padding: 14px 18px; border-radius: 12px; background: #6c63ff; color: white; text-decoration: none; font-weight: 700; }
+      a.secondary { background: #263142; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p>REAL-TIME NODE.JS DEMO</p>
+      <h1>One canvas. Every browser.</h1>
+      <p>Open either room below in multiple tabs or devices. Add a note in one view and it will appear on the same canvas for everyone.</p>
+      <div class="links">
+        <a href="page-one.html">Open Page One</a>
+        <a class="secondary" href="page-two.html">Open Page Two</a>
+      </div>
+    </main>
+  </body>
+</html>

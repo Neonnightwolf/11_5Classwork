@@ -1,0 +1,11 @@
+{
+  "name": "shared-canvas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A two-page real-time shared canvas powered by Node.js and WebSockets.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
