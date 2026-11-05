@@ -48,7 +48,7 @@ function draw() {
   }
 }
 
-function socketUrl() { return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`; }
+function socketUrl() { return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`; }
 const socket = new WebSocket(socketUrl());
 socket.addEventListener('open', () => { status.textContent = 'Connected live'; status.classList.add('connected'); });
 socket.addEventListener('close', () => { status.textContent = 'Disconnected'; status.classList.remove('connected'); });
