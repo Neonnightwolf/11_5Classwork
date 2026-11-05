@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const siteDir = __dirname;
 const notes = [];
 
@@ -84,43 +85,60 @@ server.on('upgrade', (request, socket) => {
   if (!key) return socket.destroy();
   const accept = crypto.createHash('sha1').update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest('base64');
   socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
+  socket.setNoDelay(true);
   clients.add(socket);
   socket.write(encodeWebSocketMessage({ type: 'canvas-state', notes }));
 
+  let pendingData = Buffer.alloc(0);
   socket.on('data', (rawMessage) => {
-    try {
-      const decoded = decodeWebSocketMessage(rawMessage);
-      if (!decoded) return;
-      const message = JSON.parse(decoded);
-      if (message.type === 'add-note' && typeof message.text === 'string') {
-        const text = message.text.trim().slice(0, 120);
-        const x = Number(message.x);
-        const y = Number(message.y);
-        if (!text || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    pendingData = Buffer.concat([pendingData, rawMessage]);
+    while (pendingData.length >= 2) {
+      const frameLengthCode = pendingData[1] & 0x7f;
+      const headerLength = frameLengthCode === 126 ? 4 : frameLengthCode === 127 ? 10 : 2;
+      if (pendingData.length < headerLength) break;
+      const payloadLength = frameLengthCode === 126
+        ? pendingData.readUInt16BE(2)
+        : frameLengthCode === 127
+          ? Number(pendingData.readBigUInt64BE(2))
+          : frameLengthCode;
+      const fullFrameLength = headerLength + 4 + payloadLength;
+      if (pendingData.length < fullFrameLength) break;
+      const frame = pendingData.subarray(0, fullFrameLength);
+      pendingData = pendingData.subarray(fullFrameLength);
+      try {
+        const decoded = decodeWebSocketMessage(frame);
+        if (!decoded) continue;
+        const message = JSON.parse(decoded);
+        if (message.type === 'add-note' && typeof message.text === 'string') {
+          const text = message.text.trim().slice(0, 120);
+          const x = Number(message.x);
+          const y = Number(message.y);
+          if (!text || !Number.isFinite(x) || !Number.isFinite(y)) continue;
 
-        const note = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          text,
-          x: Math.max(20, Math.min(980, x)),
-          y: Math.max(20, Math.min(560, y)),
-          color: typeof message.color === 'string' ? message.color : '#ffe58a'
-        };
-        notes.push(note);
-        broadcast({ type: 'note-added', note });
-      }
+          const note = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            text,
+            x: Math.max(20, Math.min(980, x)),
+            y: Math.max(20, Math.min(560, y)),
+            color: typeof message.color === 'string' ? message.color : '#ffe58a'
+          };
+          notes.push(note);
+          broadcast({ type: 'note-added', note });
+        }
 
-      if (message.type === 'clear-canvas') {
-        notes.length = 0;
-        broadcast({ type: 'canvas-cleared' });
+        if (message.type === 'clear-canvas') {
+          notes.length = 0;
+          broadcast({ type: 'canvas-cleared' });
+        }
+      } catch {
+        // Ignore malformed messages from clients.
       }
-    } catch {
-      // Ignore malformed messages from clients.
     }
   });
   socket.on('close', () => clients.delete(socket));
   socket.on('error', () => clients.delete(socket));
 });
 
-server.listen(PORT, () => {
-  console.log(`Shared canvas running at http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Shared canvas running on ${HOST}:${PORT}`);
 });
